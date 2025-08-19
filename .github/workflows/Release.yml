@@ -1,0 +1,117 @@
+name: Gale Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  test-and-lint:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: true
+
+      - name: Run Linter
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1.0
+          args: --timeout=3m
+
+      - name: Run Go Tests
+        run: go test -v ./...
+
+  build-release:
+    name: Build Release Binaries
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - { os: 'linux',   arch: 'amd64' }
+          - { os: 'linux',   arch: 'arm64' }
+          - { os: 'windows', arch: 'amd64' }
+          - { os: 'darwin',  arch: 'amd64' }
+          - { os: 'darwin',  arch: 'arm64' }
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5.5.0
+        with:
+          go-version: '1.25.0'
+
+      - name: Set up build variables
+        id: vars
+        run: |
+          BINARY_NAME="gale" # Using your repo name
+          TAG_NAME="${{ github.ref_name }}"
+          EXT=""
+          if [ "${{ matrix.platform.os }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+          echo "asset_name=${BINARY_NAME}-${TAG_NAME}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}${EXT}" >> $GITHUB_OUTPUT
+
+      - name: Build Binary
+        env:
+          GOOS: ${{ matrix.platform.os }}
+          GOARCH: ${{ matrix.platform.arch }}
+        run: |
+          # Building from the root directory ('./') as seen in your repo structure.
+          # -s -w flags create smaller binaries.
+          go build -v -o "release/${{ steps.vars.outputs.asset_name }}" -ldflags="-s -w" ./
+
+      - name: Generate SHA256 Checksum
+        run: |
+          cd release
+          sha256sum "${{ steps.vars.outputs.asset_name }}" > "${{ steps.vars.outputs.asset_name }}.sha256"
+          cd ..
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: |
+            release/${{ steps.vars.outputs.asset_name }}
+            release/${{ steps.vars.outputs.asset_name }}.sha256
+
+  create-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all release assets
+        uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          pattern: release-assets-*
+          merge-multiple: true
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          generate_release_notes: true
+          files: |
+            release-assets/*
