@@ -79,10 +79,10 @@ jobs:
           # -s -w flags create smaller binaries.
           go build -v -o "release/${{ steps.vars.outputs.asset_name }}" -ldflags="-s -w" ./
 
-      - name: Generate SHA256 Checksum
+      - name: Generate SHA512 Checksum
         run: |
           cd release
-          sha256sum "${{ steps.vars.outputs.asset_name }}" > "${{ steps.vars.outputs.asset_name }}.sha256"
+          sha512sum "${{ steps.vars.outputs.asset_name }}" > "${{ steps.vars.outputs.asset_name }}.sha512"
           cd ..
 
       - name: Upload Artifacts
