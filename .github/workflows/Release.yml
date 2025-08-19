@@ -30,7 +30,7 @@ jobs:
       - name: Run Linter
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1.0
+          version: latest
           args: --timeout=3m
 
       - name: Run Go Tests
