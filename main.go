@@ -41,7 +41,7 @@ var (
 	magenta    = color.New(color.FgMagenta).SprintFunc()
 )
 
-const version = "4.4.0"
+const version = "4.5.0"
 
 func showBanner() {
 	logoColor := color.New(color.FgCyan)
