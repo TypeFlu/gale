@@ -41,6 +41,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: test-and-lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         platform:
@@ -79,19 +83,16 @@ jobs:
           # -s -w flags create smaller binaries.
           go build -v -o "release/${{ steps.vars.outputs.asset_name }}" -ldflags="-s -w" ./
 
-      - name: Generate SHA512 Checksum
-        run: |
-          cd release
-          sha512sum "${{ steps.vars.outputs.asset_name }}" > "${{ steps.vars.outputs.asset_name }}.sha512"
-          cd ..
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'release/${{ steps.vars.outputs.asset_name }}'
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-assets-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: |
-            release/${{ steps.vars.outputs.asset_name }}
-            release/${{ steps.vars.outputs.asset_name }}.sha256
+          path: release/${{ steps.vars.outputs.asset_name }}
 
   create-release:
     name: Create GitHub Release
@@ -100,6 +101,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Download all release assets
