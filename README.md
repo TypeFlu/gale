@@ -4,4 +4,4 @@
 
 ![Go](https://skillicons.dev/icons?i=go) ![Platforms](https://skillicons.dev/icons?i=linux,windows,apple)
 
-![Release](https://img.shields.io/badge/Release-v4.5.0-blue?style=for-the-badge)
+[![Release](https://img.shields.io/badge/Release-v4.5.0-blue?style=for-the-badge)](https://github.com/TypeFlu/gale/releases/tag/v4.5.0)
