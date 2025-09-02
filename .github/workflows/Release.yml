@@ -84,7 +84,7 @@ jobs:
           go build -v -o "release/${{ steps.vars.outputs.asset_name }}" -ldflags="-s -w" ./
 
       - name: Attest Build Provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: 'release/${{ steps.vars.outputs.asset_name }}'
 
